@@ -1,17 +1,67 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+// import 'package:intl/intl.dart';
+
+Future<List<dynamic>> fetchHistori() async {
+  try {
+    final response = await http.get(Uri.parse('http://10.0.2.2:8000/api/produk/history'));
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> jsonResponse = json.decode(response.body);
+      return jsonResponse['data'] ?? [];
+    } else {
+      print("Server Error: ${response.statusCode} -> ${response.body}");
+      throw Exception('Server mengembalikan status ${response.statusCode}');
+    }
+  } catch (e) {
+    print("Koneksi Gagal: $e");
+    throw Exception('Gagal terhubung ke server: $e');
+  }
+}
 
 class HistoriPage extends StatelessWidget {
   const HistoriPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        _buildHistoryCard('Barang Masuk: Kopi Sachet', '+50', '12 Apr 2024', Colors.green),
-        _buildHistoryCard('Barang Keluar: Sabun Mandi', '-30', '10 Apr 2024', Colors.red),
-        _buildHistoryCard('Penyesuaian Stok: Minyak Goreng', '+10', '08 Apr 2024', Colors.green),
-      ],
+    return FutureBuilder<List<dynamic>>(
+      future: fetchHistori(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Terjadi kesalahan: ${snapshot.error}'));
+        }
+
+        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          List<dynamic> historiData = snapshot.data!;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: historiData.length,
+            itemBuilder: (context, index) {
+              var item = historiData[index];
+              String title = 'Stok Terupdate: ${item['nama_produk']}';
+              String amount = ' [Total: ${item['stok_saat_ini']}]';
+
+              String rawDate = item['updated_at'] ?? '';
+              String formattedDate = rawDate.length > 10 ? rawDate.substring(0, 10) : rawDate;
+
+              return _buildHistoryCard(
+                title,
+                amount,
+                formattedDate,
+                Colors.red,
+              );
+            },
+          );
+        }
+
+        return const Center(child: Text('Belum ada histori aktivitas.'));
+      },
     );
   }
 
@@ -24,11 +74,14 @@ class HistoriPage extends StatelessWidget {
             text: '$title ',
             style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             children: [
-              TextSpan(text: amount, style: TextStyle(color: amountColor)),
+              TextSpan(text: amount, style: TextStyle(color: amountColor, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
-        subtitle: Text(date),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(date),
+        ),
       ),
     );
   }
