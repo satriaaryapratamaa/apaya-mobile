@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 Future<List<dynamic>> fetchNotifikasi() async {
   try {
-    final response = await http.get(Uri.parse('http://10.0.2.2:8000/api/produk/notification'));
+    final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk/notification'));
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonResponse = json.decode(response.body);

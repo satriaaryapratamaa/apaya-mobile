@@ -44,7 +44,7 @@ class _TambahStokPageState extends State<TambahStokPage> {
     setState(() => _isLoading = true);
     try {
       // Kita asumsikan kamu punya endpoint pencarian berdasarkan SKU, atau bisa pakai route show dengan modifikasi di backend
-      final response = await http.get(Uri.parse('http://10.0.2.2:8000/api/produk/$sku'));
+      final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk/$sku'));
 
       if (response.statusCode == 200) {
         final res = json.decode(response.body);

@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'form_add_stock.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -19,7 +22,7 @@ class _ScanPageState extends State<ScanPage>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
-  // Flag agar scan hanya diproses sekali
+  // Flag agar scan hanya diproses sekali saat mendeteksi barcode
   bool _isProcessing = false;
 
   @override
@@ -41,9 +44,9 @@ class _ScanPageState extends State<ScanPage>
     super.dispose();
   }
 
-  /// Dipanggil saat barcode berhasil terdeteksi
-  void _onDetect(BarcodeCapture capture) {
-    if (_isProcessing) return; // Cegah trigger ganda
+  /// ── LOGIKA UTAMA SCAN DETECT ──────────────────────────────────────────────
+  void _onDetect(BarcodeCapture capture) async {
+    if (_isProcessing) return; // Cegah trigger ganda jika proses masih berjalan
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
@@ -52,13 +55,129 @@ class _ScanPageState extends State<ScanPage>
 
     setState(() => _isProcessing = true);
 
-    // Hentikan kamera setelah berhasil scan
+    // Hentikan kamera sementara proses validasi data berlangsung
     cameraController.stop();
 
-    // Kembali ke halaman sebelumnya sambil membawa data hasil scan
-    Navigator.pop(context, rawValue);
+    // Tampilkan loading indicator kecil agar user tahu ada proses pengecekan
+    _showLoadingDialog();
+
+    // Validasi kode SKU ke database / API Laravel
+    final Map<String, dynamic>? productData = await _checkSkuInDatabase(rawValue.trim());
+
+    // Tutup loading dialog sebelum berpindah halaman atau menampilkan alert
+    if (mounted) Navigator.pop(context);
+
+    if (!mounted) return;
+
+    if (productData != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FormAddStock(
+            sku: productData['barcode'],
+            namaProduk: productData['nama_produk'],
+            stokSekarang: productData['stok_sekarang'],
+            hargaBeli: double.parse(productData['harga_beli'].toString()),
+            hargaJual: double.parse(productData['harga_jual'].toString()),
+          ),
+        ),
+      );
+    } else {
+      _showProductNotFoundError(rawValue.trim());
+    }
   }
 
+  /// ── REQUESET KE API LARAVEL (Mengecek SKU) ──────────────────────────────────
+  Future<Map<String, dynamic>?> _checkSkuInDatabase(String skuCode) async {
+    try {
+      // Sesuaikan URL ini dengan environment server Laravel Anda
+      final url = Uri.parse('http://192.168.18.130:8000/api/produk/cek-barcode');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'barcode': skuCode,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      debugPrint("=== DEBUG API SCAN ===");
+      debugPrint("SKU yang dikirim: $skuCode");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          return responseData['data']; // Mengembalikan Map data produk
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint("Error Koneksi API: $e");
+      return null;
+    }
+  }
+
+  /// ── UTILITY DIALOGS & KONTROL SCANNER ─────────────────────────────────────
+
+  // Dialog loading saat mengecek data ke Laravel
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.greenAccent),
+        ),
+      ),
+    );
+  }
+
+  // Dialog jika kode barang tidak terdaftar
+  void _showProductNotFoundError(String skuCode) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Text('Kode Tidak Ada', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Text('Kode barang (SKU) "$skuCode" tidak terdaftar di dalam sistem.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Tutup dialog error
+                _resetScanner(); // Hidupkan kembali kamera untuk scan ulang
+              },
+              child: const Text(
+                'Scan Ulang',
+                style: TextStyle(color: Color(0xFF1565C0), fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Fungsi untuk mereset flag dan menghidupkan kembali kamera
+  void _resetScanner() {
+    setState(() => _isProcessing = false);
+    cameraController.start();
+  }
+
+  /// ── UI BUILDER ────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,7 +185,7 @@ class _ScanPageState extends State<ScanPage>
       appBar: AppBar(
         backgroundColor: const Color(0xFF1565C0),
         title: const Text(
-          'Scan Barcode',
+          'Scan SKU Produk',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -74,7 +193,6 @@ class _ScanPageState extends State<ScanPage>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Tombol Flash di AppBar (kanan atas)
           ValueListenableBuilder<MobileScannerState>(
             valueListenable: cameraController,
             builder: (context, state, child) {
@@ -96,13 +214,10 @@ class _ScanPageState extends State<ScanPage>
       body: Stack(
         alignment: Alignment.center,
         children: [
-          // ── 1. Feed kamera nyata ──────────────────────────────────────
           MobileScanner(
             controller: cameraController,
             onDetect: _onDetect,
           ),
-
-          // ── 2. Overlay gelap transparan di luar area scan ─────────────
           ColorFiltered(
             colorFilter: ColorFilter.mode(
               Colors.black.withOpacity(0.6),
@@ -111,14 +226,12 @@ class _ScanPageState extends State<ScanPage>
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Lapisan gelap penuh (background overlay)
                 Container(
                   decoration: const BoxDecoration(
                     color: Colors.black,
                     backgroundBlendMode: BlendMode.dstOut,
                   ),
                 ),
-                // Lubang transparan (area scan)
                 Center(
                   child: Container(
                     width: 260,
@@ -132,8 +245,6 @@ class _ScanPageState extends State<ScanPage>
               ],
             ),
           ),
-
-          // ── 3. Bingkai sudut kamera (Corner Brackets) ─────────────────
           const SizedBox(
             width: 260,
             height: 260,
@@ -141,8 +252,6 @@ class _ScanPageState extends State<ScanPage>
               painter: ScannerOverlayPainter(),
             ),
           ),
-
-          // ── 4. Garis laser hijau animasi ──────────────────────────────
           SizedBox(
             width: 260,
             height: 260,
@@ -153,7 +262,7 @@ class _ScanPageState extends State<ScanPage>
                   clipBehavior: Clip.hardEdge,
                   children: [
                     Positioned(
-                      top: _animation.value * 257, // 260 - 3 (tebal garis)
+                      top: _animation.value * 257,
                       left: 0,
                       right: 0,
                       child: Container(
@@ -175,12 +284,10 @@ class _ScanPageState extends State<ScanPage>
               },
             ),
           ),
-
-          // ── 5. Teks petunjuk di bawah area scan ───────────────────────
           const Positioned(
             bottom: 130,
             child: Text(
-              'Arahkan kamera ke barcode produk',
+              'Arahkan kamera ke barcode SKU produk',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
@@ -190,27 +297,21 @@ class _ScanPageState extends State<ScanPage>
           ),
         ],
       ),
-
-      // ── 6. Bottom bar khusus scanner ───────────────────────────────────
       bottomNavigationBar: Container(
         height: 100,
         color: const Color(0xFF1A1A1A),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // Tombol Flash (kiri)
             _buildBottomAction(
               icon: Icons.bolt,
               label: 'Flash',
               onTap: () => cameraController.toggleTorch(),
             ),
-
-            // Tombol Scan (tengah) — tekan untuk restart kamera jika berhenti
             GestureDetector(
               onTap: () {
                 if (_isProcessing) {
-                  setState(() => _isProcessing = false);
-                  cameraController.start();
+                  _resetScanner();
                 }
               },
               child: Container(
@@ -233,8 +334,6 @@ class _ScanPageState extends State<ScanPage>
                 ),
               ),
             ),
-
-            // Tombol Switch Camera (kanan)
             _buildBottomAction(
               icon: Icons.cameraswitch,
               label: 'Ganti',
@@ -246,7 +345,6 @@ class _ScanPageState extends State<ScanPage>
     );
   }
 
-  /// Widget helper: tombol ikon di bottom bar
   Widget _buildBottomAction({
     required IconData icon,
     required String label,
@@ -270,7 +368,6 @@ class _ScanPageState extends State<ScanPage>
   }
 }
 
-// ── CustomPainter: Sudut bingkai (Corner Brackets) ──────────────────────────
 class ScannerOverlayPainter extends CustomPainter {
   const ScannerOverlayPainter();
 
@@ -284,19 +381,15 @@ class ScannerOverlayPainter extends CustomPainter {
 
     const double lineLength = 40.0;
 
-    // Sudut Kiri Atas
     canvas.drawLine(Offset.zero, const Offset(lineLength, 0), paint);
     canvas.drawLine(Offset.zero, const Offset(0, lineLength), paint);
 
-    // Sudut Kanan Atas
     canvas.drawLine(Offset(size.width, 0), Offset(size.width - lineLength, 0), paint);
     canvas.drawLine(Offset(size.width, 0), Offset(size.width, lineLength), paint);
 
-    // Sudut Kiri Bawah
     canvas.drawLine(Offset(0, size.height), Offset(lineLength, size.height), paint);
     canvas.drawLine(Offset(0, size.height), Offset(0, size.height - lineLength), paint);
 
-    // Sudut Kanan Bawah
     canvas.drawLine(Offset(size.width, size.height), Offset(size.width - lineLength, size.height), paint);
     canvas.drawLine(Offset(size.width, size.height), Offset(size.width, size.height - lineLength), paint);
   }
