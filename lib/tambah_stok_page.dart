@@ -83,7 +83,7 @@ class _TambahStokPageState extends State<TambahStokPage> {
 
     try {
       final response = await http.put(
-        Uri.parse('http://10.0.2.2:8000/api/produk/$_produkId'),
+        Uri.parse('http://192.168.0.105:8000/api/produk/$_produkId'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "nama_produk": _namaProduk,

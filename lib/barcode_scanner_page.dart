@@ -97,7 +97,7 @@ class _ScanPageState extends State<ScanPage>
   Future<Map<String, dynamic>?> _checkSkuInDatabase(String skuCode) async {
     try {
       // Sesuaikan URL ini dengan environment server Laravel Anda
-      final url = Uri.parse('http://192.168.18.130:8000/api/produk/cek-barcode');
+      final url = Uri.parse('http://192.168.0.105:8000/api/produk/cek-barcode');
 
       final response = await http.post(
         url,

@@ -48,7 +48,7 @@ class _FormAddStockState extends State<FormAddStock> {
 
       if (!mounted) return;
 
-      final url = Uri.parse('http://192.168.18.130:8000/api/produk/${widget.sku}');
+      final url = Uri.parse('http://192.168.0.105:8000/api/produk/${widget.sku}');
 
       final response = await http.put(
         url,
