@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'barcode_scanner_page.dart'; // Import halaman scan kamu
+import 'barcode_scanner_page.dart';
 
 class TambahStokPage extends StatefulWidget {
   const TambahStokPage({super.key});
@@ -18,7 +18,7 @@ class _TambahStokPageState extends State<TambahStokPage> {
   String _namaProduk = "Belum mendeteksi produk";
   int _stokSaatIni = 0;
   bool _isLoading = false;
-  String? _produkId; // Untuk menyimpan ID produk dari Laravel
+  String? _produkId; // Untuk menyimpan ID produk dari backend
 
   /// Fungsi untuk membuka halaman Scanner dan menerima hasilnya
   Future<void> _bukaScanner() async {
@@ -43,7 +43,6 @@ class _TambahStokPageState extends State<TambahStokPage> {
   Future<void> _cekProdukKeLaravel(String sku) async {
     setState(() => _isLoading = true);
     try {
-      // Kita asumsikan kamu punya endpoint pencarian berdasarkan SKU, atau bisa pakai route show dengan modifikasi di backend
       final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk/$sku'));
 
       if (response.statusCode == 200) {
@@ -83,12 +82,11 @@ class _TambahStokPageState extends State<TambahStokPage> {
     int totalStokBaru = _stokSaatIni + jumlahTambah;
 
     try {
-      // Kirim request PUT ke endpoint api.produk.update milik Laravel
       final response = await http.put(
         Uri.parse('http://10.0.2.2:8000/api/produk/$_produkId'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "nama_produk": _namaProduk, // Mengikuti aturan required validator Laravel kamu
+          "nama_produk": _namaProduk,
           "sku": _skuController.text,
           "harga_beli": 0, // Sesuaikan dengan kebutuhan atau ambil dari model sebelumnya
           "harga_jual": 0,
