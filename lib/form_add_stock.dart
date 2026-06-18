@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'api_config.dart';
 
 class FormAddStock extends StatefulWidget {
   final String sku;
@@ -48,7 +49,7 @@ class _FormAddStockState extends State<FormAddStock> {
 
       if (!mounted) return;
 
-      final url = Uri.parse('http://192.168.0.105:8000/api/produk/${widget.sku}');
+      final url = Uri.parse('${ApiConfig.baseUrl}/produk/${widget.sku}');
 
       final response = await http.put(
         url,

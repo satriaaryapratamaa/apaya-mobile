@@ -71,24 +71,7 @@ class _ScanPageState extends State<ScanPage>
     if (!mounted) return;
 
     if (productData != null) {
-      final apakahBerhasilUpdate = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => FormAddStock(
-            sku: productData['barcode'],
-            namaProduk: productData['nama_produk'],
-            stokSekarang: productData['stok_sekarang'],
-            hargaBeli: double.parse(productData['harga_beli'].toString()),
-            hargaJual: double.parse(productData['harga_jual'].toString()),
-          ),
-        ),
-      );
-      if (apakahBerhasilUpdate == true && mounted) {
-        Navigator.pop(context, true);
-      } else {
-        // Jika user menekan back biasa di form tanpa simpan, reset scanner agar bisa scan kode lain
-        _resetScanner();
-      }
+      Navigator.pop(context, productData);
     } else {
       _showProductNotFoundError(rawValue.trim());
     }

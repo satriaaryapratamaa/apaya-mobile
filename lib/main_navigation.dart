@@ -4,6 +4,7 @@ import 'history_page.dart';
 import 'notifikasi_page.dart';
 import 'profil_page.dart';
 import 'barcode_scanner_page.dart';
+import 'form_add_stock.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -15,11 +16,13 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    BarangPage(),
-    HistoriPage(),
-    NotifikasiPage(),
-    ProfilPage(),
+  final GlobalKey<BarangPageState> barangPageKey = GlobalKey<BarangPageState>();
+
+  late final List<Widget> _pages = [
+    BarangPage(key: barangPageKey), // Pasang key di sini!
+    const HistoriPage(),
+    const NotifikasiPage(),
+    const ProfilPage(),
   ];
 
   final List<String> _titles = const [
@@ -35,17 +38,51 @@ class _MainNavigationState extends State<MainNavigation> {
     });
   }
 
+  // UPDATE ALUR FUNGSI SCANNER
   Future<void> _openScanner() async {
-    final result = await Navigator.push(
+    // Buka halaman scanner
+    final dynamic productData = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ScanPage()),
     );
 
-    if (!mounted || result == null) return;
+    if (!mounted || productData == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Barcode terbaca: $result')),
+    // Jika sukses scan dan dapat data barang, buka Form Add Stock
+    final otomatisRefresh = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FormAddStock(
+          sku: productData['barcode'].toString(),
+          namaProduk: productData['nama_produk'].toString(),
+          stokSekarang: int.parse(productData['stok_sekarang'].toString()),
+          hargaBeli: double.parse(productData['harga_beli'].toString()),
+          hargaJual: double.parse(productData['harga_jual'].toString()),
+        ),
+      ),
     );
+
+    if (!mounted) return;
+
+    // Jika form sukses disimpan (return true)
+    if (otomatisRefresh == true) {
+      // Pindahkan otomatis ke tab "Barang" (index 0) jika sebelumnya user scan dari tab lain
+      if (_currentIndex != 0) {
+        _changePage(0);
+      }
+
+      // Tekan tombol "Refresh" di BarangPage menggunakan remote control (Key)
+      barangPageKey.currentState?.refreshDataBarang();
+
+      // Munculkan snackbar sukses tambahan (Opsional)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sistem sedang memperbarui daftar stok...'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -71,7 +108,7 @@ class _MainNavigationState extends State<MainNavigation> {
         shape: const CircleBorder(
           side: BorderSide(color: Colors.white, width: 4),
         ),
-        onPressed: _openScanner,
+        onPressed: _openScanner, // Memanggil fungsi scanner yang baru
         child: const Text(
           'Scan',
           style: TextStyle(

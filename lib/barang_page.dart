@@ -5,11 +5,9 @@ import 'form_add_stock.dart';
 import 'api_config.dart';
 
 Future<List<dynamic>> fetchBarang() async {
-  // Sesuaikan URL dengan env (10.0.2.2 atau IP Lokal laptop)
   final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/produk'));
 
   if (response.statusCode == 200) {
-    // Decode response body menjadi Map terlebih dahulu
     final Map<String, dynamic> jsonResponse = json.decode(response.body);
     return jsonResponse['data'] ?? [];
   } else {
@@ -21,21 +19,21 @@ class BarangPage extends StatefulWidget {
   const BarangPage({super.key});
 
   @override
-  State<BarangPage> createState() => _BarangPageState();
+  State<BarangPage> createState() => BarangPageState(); // Garis bawah (_) dihapus
 }
 
-class _BarangPageState extends State<BarangPage> {
-
+// Class ini dibuat Public agar bisa diakses dari Navbar
+class BarangPageState extends State<BarangPage> {
   late Future<List<dynamic>> _futureBarang;
 
   @override
   void initState() {
     super.initState();
-
-    _refreshDataBarang();
+    refreshDataBarang();
   }
 
-  void _refreshDataBarang() {
+  // ── FUNGSI INI DIBUAT PUBLIC AGAR BISA DIPANGGIL DARI NAVBAR ──
+  void refreshDataBarang() {
     setState(() {
       _futureBarang = fetchBarang();
     });
@@ -45,7 +43,7 @@ class _BarangPageState extends State<BarangPage> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Search Bar tetap sama
+        // ── BAGIAN ATAS: HANYA SEARCH BAR (SCANNER DIHAPUS) ──
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: TextField(
@@ -54,6 +52,7 @@ class _BarangPageState extends State<BarangPage> {
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
@@ -62,22 +61,19 @@ class _BarangPageState extends State<BarangPage> {
           ),
         ),
 
-        // Daftar Item dari API Laravel
+        // ── DAFTAR ITEM DARI API LARAVEL ──
         Expanded(
           child: FutureBuilder<List<dynamic>>(
-            future: _futureBarang, // Memanggil fungsi API
+            future: _futureBarang,
             builder: (context, snapshot) {
-              // Kondisi saat data sedang loading
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              // Kondisi saat terjadi error (misal: server mati / IP salah)
               if (snapshot.hasError) {
                 return Center(child: Text('Terjadi kesalahan: ${snapshot.error}'));
               }
 
-              // Kondisi saat data berhasil didapatkan
               if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                 List<dynamic> daftarBarang = snapshot.data!;
 
@@ -89,20 +85,24 @@ class _BarangPageState extends State<BarangPage> {
 
                     return InkWell(
                       onTap: () async {
+                        // Buka Form Manual jika list di-klik
                         final otomatisRefresh = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => FormAddStock(
-                              namaProduk: barang['nama_produk'].toString(),
                               sku: barang['sku'].toString(),
+                              namaProduk: barang['nama_produk'].toString(),
                               stokSekarang: int.parse(barang['stok_saat_ini'].toString()),
                               hargaJual: double.parse(barang['harga_jual'].toString()),
                               hargaBeli: double.parse(barang['harga_beli'].toString()),
                             ),
                           ),
                         );
-                        if(otomatisRefresh == true) {
-                          _refreshDataBarang();
+
+                        // Refresh jika berhasil update manual
+                        if (!context.mounted) return;
+                        if (otomatisRefresh == true) {
+                          refreshDataBarang();
                         }
                       },
                       child: _buildItemCard(
@@ -115,7 +115,6 @@ class _BarangPageState extends State<BarangPage> {
                 );
               }
 
-              // Kondisi jika data dari API kosong
               return const Center(child: Text('Tidak ada data produk.'));
             },
           ),
