@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'form_add_stock.dart';
+import 'api_config.dart';
 
 Future<List<dynamic>> fetchBarang() async {
   // Sesuaikan URL dengan env (10.0.2.2 atau IP Lokal laptop)
-  final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk'));
+  final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/produk'));
 
   if (response.statusCode == 200) {
     // Decode response body menjadi Map terlebih dahulu

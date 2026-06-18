@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'form_add_stock.dart';
+import 'api_config.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
@@ -97,7 +98,7 @@ class _ScanPageState extends State<ScanPage>
   Future<Map<String, dynamic>?> _checkSkuInDatabase(String skuCode) async {
     try {
       // Sesuaikan URL ini dengan environment server Laravel Anda
-      final url = Uri.parse('http://192.168.0.105:8000/api/produk/cek-barcode');
+      final url = Uri.parse('${ApiConfig.baseUrl}/produk/cek-barcode');
 
       final response = await http.post(
         url,

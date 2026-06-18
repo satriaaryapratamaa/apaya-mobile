@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_config.dart';
 // import 'package:intl/intl.dart';
 
 Future<List<dynamic>> fetchHistori() async {
   try {
-    final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk/history'));
+    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/produk/history'));
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> jsonResponse = json.decode(response.body);
