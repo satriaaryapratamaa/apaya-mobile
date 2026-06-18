@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'form_add_stock.dart';
 
-// Taruh fungsi fetch di sini atau di file terpisah
 Future<List<dynamic>> fetchBarang() async {
-  // Sesuaikan URL dengan env kamu (10.0.2.2 atau IP Lokal laptop)
+  // Sesuaikan URL dengan env (10.0.2.2 atau IP Lokal laptop)
   final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk'));
 
   if (response.statusCode == 200) {
@@ -16,8 +16,29 @@ Future<List<dynamic>> fetchBarang() async {
   }
 }
 
-class BarangPage extends StatelessWidget {
+class BarangPage extends StatefulWidget {
   const BarangPage({super.key});
+
+  @override
+  State<BarangPage> createState() => _BarangPageState();
+}
+
+class _BarangPageState extends State<BarangPage> {
+
+  late Future<List<dynamic>> _futureBarang;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _refreshDataBarang();
+  }
+
+  void _refreshDataBarang() {
+    setState(() {
+      _futureBarang = fetchBarang();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +64,7 @@ class BarangPage extends StatelessWidget {
         // Daftar Item dari API Laravel
         Expanded(
           child: FutureBuilder<List<dynamic>>(
-            future: fetchBarang(), // Memanggil fungsi API
+            future: _futureBarang, // Memanggil fungsi API
             builder: (context, snapshot) {
               // Kondisi saat data sedang loading
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -65,10 +86,29 @@ class BarangPage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     var barang = daftarBarang[index];
 
-                    return _buildItemCard(
-                      barang['nama_produk'].toString(),
-                      barang['stok_saat_ini'].toString(),
-                      'Rp ${barang['harga_jual'] ?? 0}',
+                    return InkWell(
+                      onTap: () async {
+                        final otomatisRefresh = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FormAddStock(
+                              namaProduk: barang['nama_produk'].toString(),
+                              sku: barang['sku'].toString(),
+                              stokSekarang: int.parse(barang['stok_saat_ini'].toString()),
+                              hargaJual: double.parse(barang['harga_jual'].toString()),
+                              hargaBeli: double.parse(barang['harga_beli'].toString()),
+                            ),
+                          ),
+                        );
+                        if(otomatisRefresh == true) {
+                          _refreshDataBarang();
+                        }
+                      },
+                      child: _buildItemCard(
+                          barang['nama_produk'].toString(),
+                          barang['stok_saat_ini'].toString(),
+                          'Rp ${barang['harga_jual'] ?? 0},'
+                      ),
                     );
                   },
                 );

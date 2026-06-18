@@ -74,7 +74,7 @@ class _FormAddStockState extends State<FormAddStock> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else {
         // Jika Laravel menolak (misal karena 404 atau 422)
         if (!mounted) return;

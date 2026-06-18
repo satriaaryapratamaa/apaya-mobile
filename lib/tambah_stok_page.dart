@@ -105,7 +105,7 @@ class _TambahStokPageState extends State<TambahStokPage> {
         print(response.body);
       }
     } catch (e) {
-      print("Error update: $e");
+      throw Exception("Error update: $e");
     }
   }
 
