@@ -12,11 +12,9 @@ Future<List<dynamic>> fetchHistori() async {
       final Map<String, dynamic> jsonResponse = json.decode(response.body);
       return jsonResponse['data'] ?? [];
     } else {
-      print("Server Error: ${response.statusCode} -> ${response.body}");
       throw Exception('Server mengembalikan status ${response.statusCode}');
     }
   } catch (e) {
-    print("Koneksi Gagal: $e");
     throw Exception('Gagal terhubung ke server: $e');
   }
 }

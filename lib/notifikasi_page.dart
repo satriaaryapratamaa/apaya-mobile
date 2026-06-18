@@ -11,11 +11,9 @@ Future<List<dynamic>> fetchNotifikasi() async {
       final Map<String, dynamic> jsonResponse = json.decode(response.body);
       return jsonResponse['data'] ?? [];
     } else {
-      print("Server Error: ${response.statusCode}");
       throw Exception('Gagal memuat data dari server');
     }
   } catch (e) {
-    print("Koneksi Gagal: $e");
     throw Exception('Gagal terhubung ke server');
   }
 }
