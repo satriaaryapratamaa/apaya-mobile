@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'barcode_scanner_page.dart'; // Import halaman scan kamu
+import 'barcode_scanner_page.dart'; 
+import 'api_config.dart';
 
 class TambahStokPage extends StatefulWidget {
   const TambahStokPage({super.key});
@@ -44,7 +45,7 @@ class _TambahStokPageState extends State<TambahStokPage> {
     setState(() => _isLoading = true);
     try {
       // Kita asumsikan kamu punya endpoint pencarian berdasarkan SKU, atau bisa pakai route show dengan modifikasi di backend
-      final response = await http.get(Uri.parse('http://192.168.18.130:8000/api/produk/$sku'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/produk/$sku'));
 
       if (response.statusCode == 200) {
         final res = json.decode(response.body);
