@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'barcode_scanner_page.dart'; 
 import 'api_config.dart';
-import 'barcode_scanner_page.dart';
 
 class TambahStokPage extends StatefulWidget {
   const TambahStokPage({super.key});

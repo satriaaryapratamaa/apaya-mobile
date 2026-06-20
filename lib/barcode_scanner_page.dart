@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'form_add_stock.dart';
+// import 'form_add_stock.dart';
 import 'api_config.dart';
 
 class ScanPage extends StatefulWidget {
